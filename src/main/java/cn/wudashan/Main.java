@@ -1,11 +1,12 @@
 package cn.wudashan;
 
-import cn.wudashan.executor.BaseThreadPoolExecutor;
+import cn.wudashan.executor.MDCRunnable;
 import cn.wudashan.util.MDCUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 主函数
@@ -13,26 +14,36 @@ import java.util.UUID;
  */
 public class Main {
 
-    private static final String KEY = "requestId";
-
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
     public static void main(String[] args) {
 
-        MDCUtil.put(KEY, UUID.randomUUID().toString());
+        // 入口传入请求ID
+        MDCUtil.putRequestId();
 
+        // 主线程打印日志
         logger.debug("log in main thread");
 
-        BaseThreadPoolExecutor executor = new BaseThreadPoolExecutor();
-        executor.execute(new Runnable() {
+        // 异步线程打印日志，用MDCRunnable装饰Runnable
+        new Thread(new MDCRunnable(new Runnable() {
             @Override
             public void run() {
-                logger.debug("log in base thread pool");
+                logger.debug("log in other thread");
             }
-        });
-        executor.shutdown();
+        })).start();
 
-        MDCUtil.remove(KEY);
+        // 异步线程池打印日志，用MDCRunnable装饰Runnable
+        EXECUTOR.execute(new MDCRunnable(new Runnable() {
+            @Override
+            public void run() {
+                logger.debug("log in other thread pool");
+            }
+        }));
+        EXECUTOR.shutdown();
+
+        // 出口移除请求ID
+        MDCUtil.removeRequestId();
 
     }
 
