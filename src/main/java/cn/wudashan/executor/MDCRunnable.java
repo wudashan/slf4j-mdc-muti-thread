@@ -18,7 +18,7 @@ public class MDCRunnable implements Runnable {
     public MDCRunnable(Runnable runnable) {
         this.runnable = runnable;
         // 保存当前线程的MDC值
-        this.map = MDC.getCopyOfContextMap();
+        this.map = MDCUtil.getCopyOfContextMap();
     }
 
     @Override
